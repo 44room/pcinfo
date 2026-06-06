@@ -6,6 +6,12 @@ __pycache__/
 venv/
 env/
 
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+icon.ico
+
 # Editor / OS / tooling
 .vscode/
 .idea/
