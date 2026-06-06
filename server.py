@@ -24,6 +24,7 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,7 +33,13 @@ import psutil
 
 HOST = "0.0.0.0"
 PORT = 8000
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# When bundled by PyInstaller (--onefile), data files such as index.html are
+# unpacked to a temp dir exposed as sys._MEIPASS. Otherwise use this file's dir.
+if getattr(sys, "frozen", False):
+    BASE_DIR = sys._MEIPASS  # type: ignore[attr-defined]
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # On Windows, prevent a console window from flashing each time nvidia-smi runs.
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -259,6 +266,21 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         # Keep the console quiet (avoid a log line per 1s poll).
         pass
+
+
+def serve_background():
+    """Start the sampler + HTTP server on a daemon thread; return the server.
+
+    Used by the tray app (tray_app.py) so the GUI/tray loop can own the main
+    thread. Call server.shutdown() to stop it. Raises OSError if the port is
+    already in use (e.g. another instance is running).
+    """
+    start_sampler()
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    threading.Thread(
+        target=server.serve_forever, name="pcinfo-http", daemon=True
+    ).start()
+    return server
 
 
 def main():
