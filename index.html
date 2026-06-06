@@ -9,9 +9,16 @@
   :root {
     --bg: #0f172a;
     --card: #1e293b;
+    --card2: #334155;
     --text: #e2e8f0;
     --muted: #94a3b8;
     --accent: #38bdf8;
+    --blue: #38bdf8;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --orange: #f97316;
+    --green: #22c55e;
+    --purple: #a78bfa;
   }
   * { box-sizing: border-box; }
   body {
@@ -21,72 +28,113 @@
     color: var(--text);
     padding: 24px;
   }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; }
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
   }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
   .card {
     background: var(--card);
     border-radius: 12px;
     padding: 18px 20px;
     box-shadow: 0 4px 14px rgba(0,0,0,.3);
   }
-  .card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
-  .big { font-size: 30px; font-weight: 700; color: var(--accent); }
+  .card h2 { font-size: 15px; margin: 0 0 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .card h2 .tag { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .big { font-size: 30px; font-weight: 700; }
   .unit { font-size: 14px; color: var(--muted); margin-left: 4px; }
   .meta { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
-  .chart-wrap { position: relative; height: 260px; }
-  .mem-chart-wrap { position: relative; height: 220px; }
-  .status { font-size: 12px; color: var(--muted); margin-top: 16px; }
-  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:6px; }
-  .dot.off { background:#ef4444; }
+  .chart-wrap { position: relative; height: 200px; }
+  .mem-chart-wrap { position: relative; height: 200px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .io { display: flex; gap: 18px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .io b { color: var(--text); font-weight: 600; }
+  /* horizontal capacity bars */
+  .bars { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .bar-line .bl-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .bl-name { font-weight: 600; }
+  .bl-sub { color: var(--muted); }
+  .track { height: 8px; background: var(--card2); border-radius: 6px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 6px; transition: width .4s ease, background .4s ease; }
+  .gpu-block { margin-top: 6px; }
+  .gpu-block + .gpu-block { border-top: 1px solid var(--card2); margin-top: 14px; padding-top: 14px; }
+  .status { font-size: 12px; color: var(--muted); margin-top: 18px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-right:6px; }
+  .dot.off { background:var(--red); }
+  .empty { color: var(--muted); font-size: 14px; padding: 30px 0; text-align: center; }
 </style>
 </head>
 <body>
-  <h1>PC Info Monitor</h1>
-  <div class="sub" id="hostline">読み込み中...</div>
+  <header>
+    <h1>PC Info Monitor</h1>
+    <span class="sub" id="hostline">読み込み中...</span>
+  </header>
 
   <div class="grid">
+    <!-- CPU -->
     <div class="card">
       <h2>CPU使用率</h2>
-      <div><span class="big" id="cpuVal">--</span><span class="unit">%</span></div>
+      <div><span class="big" id="cpuVal" style="color:var(--accent)">--</span><span class="unit">%</span></div>
       <div class="chart-wrap"><canvas id="cpuChart"></canvas></div>
       <div class="meta" id="cpuMeta"></div>
     </div>
 
+    <!-- Memory -->
     <div class="card">
       <h2>メモリ使用率</h2>
-      <div><span class="big" id="memVal">--</span><span class="unit">%</span></div>
+      <div><span class="big" id="memVal" style="color:var(--orange)">--</span><span class="unit">%</span></div>
       <div class="mem-chart-wrap"><canvas id="memChart"></canvas></div>
       <div class="meta" id="memMeta"></div>
+    </div>
+
+    <!-- Disk -->
+    <div class="card">
+      <h2>ディスク <span class="tag">アクティブ率 / 容量</span></h2>
+      <div class="row">
+        <div><span class="big" id="diskBusyVal" style="color:var(--purple)">--</span><span class="unit">% busy</span></div>
+        <div class="io">
+          <span>読み <b id="diskRead">-- MB/s</b></span>
+          <span>書き <b id="diskWrite">-- MB/s</b></span>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:120px"><canvas id="diskChart"></canvas></div>
+      <div class="bars" id="diskBars"></div>
+    </div>
+
+    <!-- GPU -->
+    <div class="card">
+      <h2>GPU使用率 <span class="tag">NVIDIA</span></h2>
+      <div id="gpuBody">
+        <div class="empty" id="gpuEmpty">読み込み中...</div>
+      </div>
     </div>
   </div>
 
   <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">接続中...</span></div>
 
 <script>
-const MAX_POINTS = 60; // 直近60秒分の縦棒を表示
+const MAX_POINTS = 60; // 直近60秒分を表示
 
-// ---- CPU: vertical bar chart (time series) ----
-const cpuCtx = document.getElementById('cpuChart').getContext('2d');
-const cpuChart = new Chart(cpuCtx, {
-  type: 'bar',
-  data: {
-    labels: Array(MAX_POINTS).fill(''),
-    datasets: [{
-      label: 'CPU %',
-      data: Array(MAX_POINTS).fill(0),
-      backgroundColor: '#38bdf8',
-      borderRadius: 2,
-      barPercentage: 1.0,
-      categoryPercentage: 0.9,
-    }]
-  },
-  options: {
+// 使用率(%) -> 色。閾値ロジックを全パネルで共通化。
+function usageColor(v) {
+  return v >= 85 ? '#ef4444' : v >= 60 ? '#f59e0b' : '#38bdf8';
+}
+
+function fmtBytes(n) {
+  const gb = n / (1024 ** 3);
+  return gb.toFixed(1) + ' GB';
+}
+function fmtMBps(bps) {
+  return (bps / (1024 ** 2)).toFixed(1) + ' MB/s';
+}
+
+// 共通のライン/バー設定 -------------------------------------------------
+function timeAxisOptions(extra) {
+  return Object.assign({
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
@@ -95,41 +143,159 @@ const cpuChart = new Chart(cpuCtx, {
       x: { ticks: { display: false }, grid: { display: false } }
     },
     plugins: { legend: { display: false }, tooltip: { enabled: false } }
-  }
+  }, extra || {});
+}
+
+// ---- CPU: vertical bar history ----
+const cpuChart = new Chart(document.getElementById('cpuChart'), {
+  type: 'bar',
+  data: {
+    labels: Array(MAX_POINTS).fill(''),
+    datasets: [{ data: Array(MAX_POINTS).fill(0), backgroundColor: '#38bdf8', borderRadius: 2, barPercentage: 1.0, categoryPercentage: 0.9 }]
+  },
+  options: timeAxisOptions()
 });
 
-// ---- Memory: doughnut (pie) chart ----
-const memCtx = document.getElementById('memChart').getContext('2d');
-const memChart = new Chart(memCtx, {
+// ---- Memory: doughnut ----
+const memChart = new Chart(document.getElementById('memChart'), {
   type: 'doughnut',
   data: {
     labels: ['使用中', '空き'],
-    datasets: [{
-      data: [0, 100],
-      backgroundColor: ['#f97316', '#334155'],
-      borderColor: '#1e293b',
-      borderWidth: 2,
-    }]
+    datasets: [{ data: [0, 100], backgroundColor: ['#f97316', '#334155'], borderColor: '#1e293b', borderWidth: 2 }]
   },
   options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false,
-    cutout: '62%',
-    plugins: {
-      legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 14 } }
-    }
+    responsive: true, maintainAspectRatio: false, animation: false, cutout: '62%',
+    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 14 } } }
   }
 });
 
-function fmtBytes(n) {
-  const gb = n / (1024 ** 3);
-  return gb.toFixed(1) + ' GB';
+// ---- Disk: busy% line history ----
+const diskChart = new Chart(document.getElementById('diskChart'), {
+  type: 'line',
+  data: {
+    labels: Array(MAX_POINTS).fill(''),
+    datasets: [{ data: Array(MAX_POINTS).fill(0), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.18)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: .25 }]
+  },
+  options: timeAxisOptions()
+});
+
+// ---- GPU: util% line history (built lazily per GPU) ----
+let gpuCharts = [];   // Chart instances per GPU
+let gpuHist = [];     // history arrays per GPU
+let gpuBuilt = false;
+
+function buildGpuPanel(gpus) {
+  const body = document.getElementById('gpuBody');
+  body.innerHTML = '';
+  gpuCharts = [];
+  gpuHist = [];
+  gpus.forEach((g, i) => {
+    const block = document.createElement('div');
+    block.className = 'gpu-block';
+    block.innerHTML = `
+      <div class="row">
+        <div><span class="big" id="gpuVal${i}" style="color:var(--green)">--</span><span class="unit">%</span></div>
+        <div class="bl-sub" style="font-size:12px; text-align:right">
+          <div id="gpuName${i}" style="color:var(--text); font-weight:600">${g.name || 'GPU'}</div>
+          <div id="gpuTemp${i}"></div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:110px"><canvas id="gpuChart${i}"></canvas></div>
+      <div class="bar-line" style="margin-top:10px">
+        <div class="bl-head"><span class="bl-name">VRAM</span><span class="bl-sub" id="gpuVram${i}"></span></div>
+        <div class="track"><div class="fill" id="gpuVramFill${i}" style="width:0%;background:var(--blue)"></div></div>
+      </div>`;
+    body.appendChild(block);
+    gpuHist.push(Array(MAX_POINTS).fill(0));
+    gpuCharts.push(new Chart(document.getElementById('gpuChart' + i), {
+      type: 'line',
+      data: { labels: Array(MAX_POINTS).fill(''), datasets: [{ data: gpuHist[i], borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.18)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: .25 }] },
+      options: timeAxisOptions()
+    }));
+  });
+  gpuBuilt = true;
+}
+
+function pushHistory(chart, value) {
+  const arr = chart.data.datasets[0].data;
+  arr.push(value); arr.shift();
 }
 
 function setStatus(ok, text) {
   document.getElementById('statusDot').className = ok ? 'dot' : 'dot off';
   document.getElementById('statusText').textContent = text;
+}
+
+// ---- Renderers -------------------------------------------------------
+function renderCpu(c) {
+  document.getElementById('cpuVal').textContent = c.total.toFixed(1);
+  pushHistory(cpuChart, c.total);
+  cpuChart.data.datasets[0].backgroundColor = cpuChart.data.datasets[0].data.map(usageColor);
+  cpuChart.update();
+  document.getElementById('cpuMeta').textContent =
+    `論理 ${c.logical_count} コア / 物理 ${c.physical_count} コア` +
+    (c.freq_mhz ? ` ・ ${(c.freq_mhz / 1000).toFixed(2)} GHz` : '');
+}
+
+function renderMem(m) {
+  document.getElementById('memVal').textContent = m.percent.toFixed(1);
+  memChart.data.datasets[0].data = [m.used, m.available];
+  memChart.update();
+  document.getElementById('memMeta').textContent =
+    `使用 ${fmtBytes(m.used)} / 全体 ${fmtBytes(m.total)} ・ 空き ${fmtBytes(m.available)}`;
+}
+
+function renderDisk(d) {
+  const io = d.io;
+  document.getElementById('diskBusyVal').textContent = io.busy_percent.toFixed(0);
+  document.getElementById('diskRead').textContent = fmtMBps(io.read_bps);
+  document.getElementById('diskWrite').textContent = fmtMBps(io.write_bps);
+  pushHistory(diskChart, io.busy_percent);
+  diskChart.update();
+
+  const bars = document.getElementById('diskBars');
+  bars.innerHTML = '';
+  d.drives.forEach(drv => {
+    const el = document.createElement('div');
+    el.className = 'bar-line';
+    el.innerHTML = `
+      <div class="bl-head">
+        <span class="bl-name">${drv.device}</span>
+        <span class="bl-sub">${fmtBytes(drv.used)} / ${fmtBytes(drv.total)} (${drv.percent.toFixed(0)}%)</span>
+      </div>
+      <div class="track"><div class="fill" style="width:${drv.percent}%;background:${usageColor(drv.percent)}"></div></div>`;
+    bars.appendChild(el);
+  });
+}
+
+function renderGpu(gpu) {
+  const empty = document.getElementById('gpuEmpty');
+  if (!gpu || !gpu.available) {
+    if (empty) empty.textContent = 'GPU情報なし（NVIDIA GPU / nvidia-smi が見つかりません）';
+    gpuBuilt = false;
+    return;
+  }
+  if (!gpuBuilt || gpuCharts.length !== gpu.gpus.length) buildGpuPanel(gpu.gpus);
+
+  gpu.gpus.forEach((g, i) => {
+    const util = g.util == null ? 0 : g.util;
+    const valEl = document.getElementById('gpuVal' + i);
+    valEl.textContent = util.toFixed(0);
+    valEl.style.color = usageColor(util);
+    document.getElementById('gpuTemp' + i).textContent =
+      (g.temp_c != null ? `${g.temp_c.toFixed(0)} ℃` : '');
+    pushHistory(gpuCharts[i], util);
+    gpuCharts[i].update();
+
+    if (g.mem_total_mb) {
+      const pct = (g.mem_used_mb / g.mem_total_mb) * 100;
+      document.getElementById('gpuVram' + i).textContent =
+        `${(g.mem_used_mb / 1024).toFixed(1)} / ${(g.mem_total_mb / 1024).toFixed(1)} GB (${pct.toFixed(0)}%)`;
+      const fill = document.getElementById('gpuVramFill' + i);
+      fill.style.width = pct + '%';
+      fill.style.background = usageColor(pct);
+    }
+  });
 }
 
 async function tick() {
@@ -138,30 +304,14 @@ async function tick() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const s = await res.json();
 
-    // CPU
-    const cpu = s.cpu.total;
-    document.getElementById('cpuVal').textContent = cpu.toFixed(1);
-    cpuChart.data.datasets[0].data.push(cpu);
-    cpuChart.data.datasets[0].data.shift();
-    // 使用率に応じて色を変える
-    cpuChart.data.datasets[0].backgroundColor = cpuChart.data.datasets[0].data.map(
-      v => v >= 85 ? '#ef4444' : v >= 60 ? '#f59e0b' : '#38bdf8'
-    );
-    cpuChart.update();
-    document.getElementById('cpuMeta').textContent =
-      `論理 ${s.cpu.logical_count} コア / 物理 ${s.cpu.physical_count} コア` +
-      (s.cpu.freq_mhz ? ` ・ ${(s.cpu.freq_mhz/1000).toFixed(2)} GHz` : '');
-
-    // Memory
-    const m = s.memory;
-    document.getElementById('memVal').textContent = m.percent.toFixed(1);
-    memChart.data.datasets[0].data = [m.used, m.available];
-    memChart.update();
-    document.getElementById('memMeta').textContent =
-      `使用 ${fmtBytes(m.used)} / 全体 ${fmtBytes(m.total)} ・ 空き ${fmtBytes(m.available)}`;
+    renderCpu(s.cpu);
+    renderMem(s.memory);
+    renderDisk(s.disk);
+    renderGpu(s.gpu);
 
     document.getElementById('hostline').textContent = `ホスト: ${s.host}`;
-    setStatus(true, '接続中 ・ 1秒ごとに更新');
+    const now = new Date().toLocaleTimeString();
+    setStatus(true, `接続中 ・ 1秒ごとに更新 ・ 最終更新 ${now}`);
   } catch (e) {
     setStatus(false, '切断 (' + e.message + ') - 再試行中');
   }
