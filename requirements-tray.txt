@@ -1,0 +1,7 @@
+# Extra dependencies for the system-tray app (tray_app.py) and building the
+# standalone .exe (build.py). The plain web server (python server.py) only
+# needs psutil from requirements.txt.
+psutil>=5.9
+pystray>=0.19
+Pillow>=10
+pyinstaller>=6

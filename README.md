@@ -36,6 +36,31 @@ http://localhost:8000
 
 停止するには実行中のコンソールで `Ctrl + C` を押します。
 
+## 実行ファイル(.exe)化・タスクトレイ常駐
+
+コンソールを開きっぱなしにせず、**タスクトレイに常駐**させて使いたい場合は、トレイ用アプリ `tray_app.py` を使います。サーバーをバックグラウンドで動かし、トレイアイコンから操作できます。
+
+- **ダブルクリック** … ダッシュボードをブラウザで開く
+- **右クリックメニュー** … ダッシュボードを開く / LAN・Tailscale のURL表示 / Windows起動時に自動実行（トグル）/ 終了
+
+### そのまま実行する
+
+```powershell
+pip install -r requirements-tray.txt
+pythonw tray_app.py   # pythonw だとコンソールが出ません
+```
+
+### 単一の .exe にビルドする（おすすめ）
+
+```powershell
+pip install -r requirements-tray.txt
+python build.py
+```
+
+`dist\pcinfo.exe` が生成されます。ダブルクリックで起動すると、コンソールなしでタスクトレイに常駐します。`pcinfo.exe` をスタートアップに登録するか、トレイメニューの「Windows起動時に自動実行」をオンにすれば、サインイン時に自動で起動します。
+
+> ビルドには [PyInstaller](https://pyinstaller.org/) を使用します。`index.html` は `.exe` に同梱されます（実行時に展開）。アンチウイルスが PyInstaller 製 `.exe` を誤検知することがありますが、自前ビルドのため問題ありません。
+
 ## リモート（Tailscale）で見る
 
 別ネットワークの端末（スマホ・別PC）から安全に閲覧するには [Tailscale](https://tailscale.com/) を使います。ポート開放やインターネットへの直接公開は不要で、通信はTailscaleが暗号化・認証します。
@@ -70,7 +95,10 @@ http://<PCのローカルIPアドレス>:8000
 | --- | --- |
 | `server.py` | 標準ライブラリのHTTPサーバー。`/api/stats` で CPU/メモリ/ディスク/GPU のJSONを返す |
 | `index.html` | Chart.js を使ったダッシュボード画面（4パネル） |
-| `requirements.txt` | 依存（`psutil`） |
+| `tray_app.py` | タスクトレイ常駐アプリ（サーバーを内蔵起動。`pystray`/`Pillow`） |
+| `build.py` | `PyInstaller` で `dist/pcinfo.exe` を生成するビルドスクリプト |
+| `requirements.txt` | 最小依存（`psutil` / `python server.py` 用） |
+| `requirements-tray.txt` | トレイ常駐・exeビルド用の依存（`pystray`/`Pillow`/`pyinstaller`） |
 
 ## 補足・カスタマイズ
 
